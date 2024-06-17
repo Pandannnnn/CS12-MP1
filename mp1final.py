@@ -35,13 +35,13 @@ class MyGame(pyxelgrid.PyxelGrid[int]):
         self.all_positions = {(x, y) for x in range(COL) for y in range(ROW)}
         self.defined_positions = {(cell.i, cell.j) for cell in self.Cell}
         self.no_state_positions = self.all_positions - self.defined_positions
-        self.powerup:list[str]=["speedup","addlife","nodelay"]
+        self.powerup:list[str]=["speedup","life","nodelay"]
         self.power=random.choice(self.powerup)
         self.spawn_powerup=True
         self.has_powerup=False
         self.speedup=False
         self.nodelay=False
-        self.powerup_cooldown=500
+        self.powerup_cooldown=1000
         for tank in self.tanks:
             if tank.state=="enemy":
                 number=random.randint(1,2)
@@ -126,6 +126,9 @@ class MyGame(pyxelgrid.PyxelGrid[int]):
         self.defined_positions = {(cell.i, cell.j) for cell in self.Cell}
         self.no_state_positions = self.all_positions - self.defined_positions
         self.spawn_powerup=True
+        self.has_powerup=False
+        self.speedup=False
+        self.nodelay=False
     def tank_cell_collision(self,tank:Tank):
         Cell=self.Cell
         for stone in Cell:
@@ -211,7 +214,8 @@ class MyGame(pyxelgrid.PyxelGrid[int]):
                         self.explosion.append((i+1,j))
                     elif vy>0:
                         self.explosion.append((i-1,j))
-                    
+                    if bullet.origin=="player":
+                        pyxel.play(1,1)
                     return True,(i,j)
         return False
     
@@ -283,6 +287,7 @@ class MyGame(pyxelgrid.PyxelGrid[int]):
                         self.bullets.remove(bullet)
                 elif (origin=="enemy" or origin=="friendlyfire") and tank.state=="player":
                     if tank.alive:
+                        self.powerup_cooldown=0
                         self.player_lives-=1
                     tank.alive=False
                     
@@ -413,6 +418,7 @@ class MyGame(pyxelgrid.PyxelGrid[int]):
                 if is_powerup and tank.state=="player":
                     x,y=is_powerup[1]
                     self.Cell.remove(Cell(x,y,self.dim,self.dim,"random",False))
+                    
                     self.has_powerup=True
             for bullet in self.bullets:
                 self.check_bullet_to_bullet_collision(bullet)
@@ -444,12 +450,13 @@ class MyGame(pyxelgrid.PyxelGrid[int]):
                     self.spawn_powerup=False
                     
             if self.has_powerup and self.powerup_cooldown>0:
-                
                 if self.power==self.powerup[0]:
+                    self.speedup=True
+                    
+                if self.power==self.powerup[1]:
+                    
                     self.player_lives+=1
                     self.powerup_cooldown=0
-                if self.power==self.powerup[1]:
-                    self.speedup=True
                 if self.power==self.powerup[2]:
                     self.nodelay=True
                 self.powerup_cooldown-=1
@@ -517,7 +524,8 @@ class MyGame(pyxelgrid.PyxelGrid[int]):
         
         pyxel.text(273,105,f"Lives: {self.player_lives}",7)
         pyxel.text(273,115,f"Enemies: {self.gamestate.enemies}",7)
-
+        if self.has_powerup:
+            pyxel.text(273,125,f"Power:{self.power}",7)
     def pre_draw_grid(self) -> None:
         pyxel.cls(0)
         for (x,y) in self.tank_explosion:
