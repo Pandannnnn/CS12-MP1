@@ -35,7 +35,7 @@ class MyGame(pyxelgrid.PyxelGrid[int]):
         self.all_positions = {(x, y) for x in range(COL) for y in range(ROW)}
         self.defined_positions = {(cell.i, cell.j) for cell in self.Cell}
         self.no_state_positions = self.all_positions - self.defined_positions
-        self.powerup:list[str]=["speedup","life","nodelay"]
+        self.powerup:list[str]=["speed","life","nodelay"]
         self.power=random.choice(self.powerup)
         self.spawn_powerup=True
         self.has_powerup=False
@@ -61,7 +61,7 @@ class MyGame(pyxelgrid.PyxelGrid[int]):
         self.bullet_speed_x=[0,0,-1*self.bulletspeed,1*self.bulletspeed]
         self.black_screen=[Cell for Cell in self.Cell if Cell.black_screen]
         self.movement=1
-        self.cooldown=20
+        self.cooldown=25
         self.recent_button: int = 0  
         self.recent_button_timer: int = 0
         self.bullet_per_every_frame=10
@@ -88,7 +88,6 @@ class MyGame(pyxelgrid.PyxelGrid[int]):
         self.bullets:list[Bullet]=[]
         self.normaltanks:list[Tank]=[]
         self.buffedtanks:list[Tank]=[] 
-        self.power=random.choice(self.powerup)
         for tank in self.tanks:
             if tank.state=="enemy":
                 number=random.randint(1,2)
@@ -106,8 +105,8 @@ class MyGame(pyxelgrid.PyxelGrid[int]):
         self.stage=self.init_state()
         self.initial=self.stage.stages
         self.stageindex=0
-        self.initalenemies=sum(1 for tank in self.gamestate.tanks if tank.state=="enemy")+len(self.gamestate.enemytanks)
         self.gamestate = self.initial[self.stageindex]
+        self.initalenemies=sum(1 for tank in self.gamestate.tanks if tank.state=="enemy")+len(self.gamestate.enemytanks)
         self.tanks_appended=0
         self.tanks:list[Tank]=self.gamestate.tanks
         self.Cell:list[Cell]=self.gamestate.cells
@@ -116,7 +115,6 @@ class MyGame(pyxelgrid.PyxelGrid[int]):
         self.player_lives=2 
         self.normaltanks:list[Tank]=[]
         self.buffedtanks:list[Tank]=[] 
-        self.power=random.choice(self.powerup)
         for tank in self.tanks:
             if tank.state=="enemy":
                 number=random.randint(1,2)
@@ -131,6 +129,7 @@ class MyGame(pyxelgrid.PyxelGrid[int]):
         self.has_powerup=False
         self.speedup=False
         self.nodelay=False
+        self.powerup_cooldown=1000
     def tank_cell_collision(self,tank:Tank):
         Cell=self.Cell
         for stone in Cell:
@@ -302,24 +301,23 @@ class MyGame(pyxelgrid.PyxelGrid[int]):
         self.sequence_state=0
     def cheat_code(self):
          if not self.usedcheatcode:
-            # Check the current state and update based on the key press
             if self.sequence_state == 0:
                 if pyxel.btnp(pyxel.KEY_P):
                     self.sequence_state = 1
                 elif pyxel.btnp(pyxel.KEY_A) or pyxel.btnp(pyxel.KEY_M):
-                    self.reset_sequence()  # Reset if the wrong key is pressed
+                    self.reset_sequence()  
             elif self.sequence_state == 1:
                 if pyxel.btnp(pyxel.KEY_A):
                     self.sequence_state = 2
                 elif pyxel.btnp(pyxel.KEY_P) or pyxel.btnp(pyxel.KEY_M):
-                    self.reset_sequence()  # Reset if the wrong key is pressed
+                    self.reset_sequence()  
             elif self.sequence_state == 2:
                 if pyxel.btnp(pyxel.KEY_M):
-                    self.sequence_state = 3  # Sequence completed
+                    self.sequence_state = 3 
                 elif pyxel.btnp(pyxel.KEY_P) or pyxel.btnp(pyxel.KEY_A):
-                    self.reset_sequence()  # Reset if the wrong key is pressed
+                    self.reset_sequence()  
 
-            # Add any additional logic for when the sequence is completed
+          
             if self.sequence_state == 3:
                 if self.stageindex + 1 < len(self.initial):
                     self.gamestate.win = True
@@ -344,9 +342,10 @@ class MyGame(pyxelgrid.PyxelGrid[int]):
             x+=TANK_WIDTH//2
         if bullet_vx<0:
             x-=TANK_WIDTH//2
-        if not any(bullet.origin== "player" for bullet in self.bullets) and tank.state=="player" :
+        if not any(bullet.origin== "player" for bullet in self.bullets) and not any(bullet.origin== "friendlyfire" for bullet in self.bullets) and tank.state=="player" :
+            
             bullet=Bullet(x,y,bullet_vx,bullet_vy,tank.state)
-            if bullet.origin=="player":
+            if (bullet.origin=="player" or bullet.origin=="friendlyfire"):
                 pyxel.play(0,0)
             self.bullets.append(bullet)
         
@@ -451,6 +450,7 @@ class MyGame(pyxelgrid.PyxelGrid[int]):
                 if is_powerup and tank.state=="player":
                     x,y=is_powerup[1]
                     self.Cell.remove(Cell(x,y,self.dim,self.dim,"random",False))
+                    self.power=random.choice(self.powerup)
                     self.has_powerup=True
             for bullet in self.bullets:
                 self.check_bullet_to_bullet_collision(bullet)
@@ -476,6 +476,7 @@ class MyGame(pyxelgrid.PyxelGrid[int]):
                         self.bullets.remove(bullet)
             
             if self.gamestate.enemies==(self.initalenemies//2):
+                
                 if self.spawn_powerup:
                     x,y=random.choice(list(self.no_state_positions))
                     self.Cell.append(Cell(x,y,self.dim,self.dim,"random",False))
@@ -516,17 +517,6 @@ class MyGame(pyxelgrid.PyxelGrid[int]):
             if pyxel.btnp(pyxel.KEY_1):
                 self.reset_game()
             self.cheat_code()
-            """
-            if pyxel.btn(pyxel.KEY_P) and pyxel.btn(pyxel.KEY_A) and pyxel.btn(pyxel.KEY_M) and not self.usedcheatcode:
-                if self.stageindex+1<len(self.initial):
-                    self.gamestate.win=True
-                    self.set_stage(self.stageindex+1)
-                    self.usedcheatcode=True
-                else:
-                    self.complete_game=True
-                    self.gamestate.is_game_over=True
-                    self.usedcheatcode=True
-            """
         if self.gamestate.is_game_over:
             if pyxel.btnp(pyxel.KEY_1):
                 self.reset_game()
@@ -614,4 +604,3 @@ class MyGame(pyxelgrid.PyxelGrid[int]):
 
 my_game = MyGame()
 my_game.run(title="Battle City", fps=60)
-# The keyword arguments are passed directly to pyxel.init
