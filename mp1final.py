@@ -258,7 +258,8 @@ class MyGame(pyxelgrid.PyxelGrid[int]):
                 start_height,end_height=((i)*self.dim),((i+1)*self.dim)
                 start_width,end_width=((j)*self.dim),((j+1)*self.dim)
                 if self.mirror_bounds(start_width,end_width,start_height,end_height,bullet.x,bullet.y):
-                    bullet.origin="friendlyfire"
+                    if bullet.origin=="player":
+                        bullet.origin="friendlyfire"
                     bullet.vy = self.bullet_speed_y[direction_index]
                     bullet.vx = self.bullet_speed_x[direction_index]
             elif material.state=="southmirror":
@@ -269,7 +270,8 @@ class MyGame(pyxelgrid.PyxelGrid[int]):
                 start_height,end_height=((i)*self.dim),((i+1)*self.dim)
                 start_width,end_width=((j)*self.dim),((j+1)*self.dim)
                 if self.mirror_bounds(start_width,end_width,start_height,end_height,bullet.x,bullet.y):
-                    bullet.origin="friendlyfire"
+                    if bullet.origin=="player":
+                        bullet.origin="friendlyfire"
                     bullet.vy = self.bullet_speed_y[direction_index]
                     bullet.vx = self.bullet_speed_x[direction_index]
        
@@ -280,7 +282,7 @@ class MyGame(pyxelgrid.PyxelGrid[int]):
             start_height,end_height=tank.y,tank.y+TANK_LENGTH-1
             start_width,end_width=tank.x,tank.x+TANK_WIDTH-1
             if start_width<=bullet.x<=end_width and start_height<=bullet.y<=end_height:
-                if origin=="player" and tank.state=="enemy" and tank.alive:
+                if (origin=="player" or origin=="friendlyfire") and tank.state=="enemy" and tank.alive:
                     tank.alive=False
                     self.gamestate.enemies-=1
                     self.tank_explosion.append((tank.x,tank.y))
@@ -613,7 +615,3 @@ class MyGame(pyxelgrid.PyxelGrid[int]):
 my_game = MyGame()
 my_game.run(title="Battle City", fps=60)
 # The keyword arguments are passed directly to pyxel.init
-
-
-
-
